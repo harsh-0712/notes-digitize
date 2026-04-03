@@ -1,0 +1,5 @@
+{
+  "name": "NoteDigitizer",
+  "description": "Digitize handwritten notes and diagrams into structured PDFs using AI.",
+  "requestFramePermissions": []
+}
