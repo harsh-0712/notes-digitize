@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Copy, Check } from 'lucide-react';
 import mermaid from 'mermaid';
+import { cn } from '../lib/utils';
 
 mermaid.initialize({
   startOnLoad: true,
@@ -8,7 +9,7 @@ mermaid.initialize({
   securityLevel: 'loose',
 });
 
-export const MermaidDiagram = ({ code }: { code: string }) => {
+export const MermaidDiagram = ({ code, noMargin = false }: { code: string, noMargin?: boolean }) => {
   const [svg, setSvg] = useState<string>('');
   const [isCopied, setIsCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,7 +37,7 @@ export const MermaidDiagram = ({ code }: { code: string }) => {
   };
 
   return (
-    <div className="my-6 relative group w-full">
+    <div className={cn("relative group w-full", !noMargin && "my-6")}>
       <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={copyToClipboard}

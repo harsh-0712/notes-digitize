@@ -28,10 +28,13 @@ import { cn } from './lib/utils';
 import { digitizeNotes } from './services/geminiService';
 import { DigitizationMode, VisualElement } from './types';
 import { OutputSection } from './components/OutputSection';
+import { compressImage } from './lib/imageUtils';
 
 export default function App() {
   const [image, setImage] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [digitizedContent, setDigitizedContent] = useState<string | VisualElement[] | null>(null);
   const [currentMode, setCurrentMode] = useState<DigitizationMode | null>(null);
@@ -44,10 +47,15 @@ export default function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
-        setDigitizedContent(null);
-        setCurrentMode(null);
-        setError(null);
+        const img = new Image();
+        img.onload = () => {
+          setAspectRatio(img.width / img.height);
+          setImage(reader.result as string);
+          setDigitizedContent(null);
+          setCurrentMode(null);
+          setError(null);
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -57,17 +65,31 @@ export default function App() {
     if (!image) return;
 
     setIsProcessing(true);
+    setProcessingStep('Optimizing image...');
     setError(null);
     setCurrentMode(mode);
 
     try {
-      const result = await digitizeNotes(image, mode);
+      // Compress image before sending to API to speed up upload and processing
+      const compressedImage = await compressImage(image, 1600, 0.8);
+      
+      setProcessingStep('AI is analyzing your notes...');
+      
+      // Add a small timeout to update the message if it takes too long
+      const longProcessTimeout = setTimeout(() => {
+        setProcessingStep('Still processing... complex notes take a bit longer.');
+      }, 8000);
+
+      const result = await digitizeNotes(compressedImage, mode);
+      clearTimeout(longProcessTimeout);
+      
       setDigitizedContent(result);
     } catch (err) {
       console.error("Error processing image:", err);
       setError("Failed to process the image. Please try again with a clearer photo.");
     } finally {
       setIsProcessing(false);
+      setProcessingStep('');
     }
   };
 
@@ -250,55 +272,57 @@ export default function App() {
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] font-sans selection:bg-[#F27D26]/20">
       {/* Header */}
       <header className="border-b border-[#1A1A1A]/10 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#F27D26] rounded-lg flex items-center justify-center text-white">
+            <div className="w-8 h-8 bg-[#F27D26] rounded-lg flex items-center justify-center text-white shrink-0">
               <FileText size={20} />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight italic serif">NoteDigitizer</h1>
+            <h1 className="text-lg sm:text-xl font-semibold tracking-tight italic serif truncate">NoteDigitizer</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {digitizedContent && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all active:scale-95",
+                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all active:scale-95",
                   isEditing 
                     ? "bg-[#F27D26] text-white shadow-lg shadow-[#F27D26]/20" 
                     : "bg-[#1A1A1A]/5 text-[#1A1A1A] hover:bg-[#1A1A1A]/10"
                 )}
               >
-                <Layout size={16} />
-                {isEditing ? 'Finish Editing' : 'Edit Output'}
+                <Layout size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">{isEditing ? 'Finish' : 'Edit'}</span>
+                <span className="xs:hidden">{isEditing ? 'Done' : 'Edit'}</span>
               </button>
             )}
             {digitizedContent && (
               <button
                 onClick={downloadPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] text-white rounded-full text-sm font-medium hover:bg-[#1A1A1A]/90 transition-all active:scale-95"
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1A1A1A] text-white rounded-full text-xs sm:text-sm font-medium hover:bg-[#1A1A1A]/90 transition-all active:scale-95"
               >
-                <Download size={16} />
-                Export PDF
+                <Download size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Export PDF</span>
+                <span className="xs:hidden">PDF</span>
               </button>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           
           {/* Left Column: Upload & Preview */}
-          <section className="space-y-8">
+          <section className="space-y-6 sm:space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-light tracking-tight">Upload your notes</h2>
-              <p className="text-[#1A1A1A]/60 font-mono text-sm uppercase tracking-widest">Handwritten to Digital</p>
+              <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Upload your notes</h2>
+              <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">Handwritten to Digital</p>
             </div>
 
             <div 
               onClick={() => fileInputRef.current?.click()}
               className={cn(
-                "relative aspect-[3/4] rounded-3xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group",
+                "relative aspect-[4/5] sm:aspect-[3/4] rounded-3xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group",
                 image ? "border-transparent" : "border-[#1A1A1A]/20 hover:border-[#F27D26]/50 bg-white"
               )}
             >
@@ -336,29 +360,32 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="grid grid-cols-2 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
               >
                 <button
                   onClick={() => handleDigitize('structured')}
-                  className="py-4 bg-[#1A1A1A] text-white rounded-2xl font-semibold shadow-xl hover:bg-[#1A1A1A]/90 transition-all active:scale-95 flex flex-col items-center justify-center gap-2"
+                  className="py-3 sm:py-4 bg-[#1A1A1A] text-white rounded-2xl font-semibold shadow-xl hover:bg-[#1A1A1A]/90 transition-all active:scale-95 flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2"
                 >
-                  <Type size={20} />
-                  <span className="text-sm">Structured Mode</span>
+                  <Type size={18} className="sm:w-5 sm:h-5" />
+                  <span className="text-xs sm:text-sm">Structured Mode</span>
                 </button>
                 <button
                   onClick={() => handleDigitize('visual')}
-                  className="py-4 bg-[#F27D26] text-white rounded-2xl font-semibold shadow-xl shadow-[#F27D26]/20 hover:bg-[#F27D26]/90 transition-all active:scale-95 flex flex-col items-center justify-center gap-2"
+                  className="py-3 sm:py-4 bg-[#F27D26] text-white rounded-2xl font-semibold shadow-xl shadow-[#F27D26]/20 hover:bg-[#F27D26]/90 transition-all active:scale-95 flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2"
                 >
-                  <Layout size={20} />
-                  <span className="text-sm">Visual Mode</span>
+                  <Layout size={18} className="sm:w-5 sm:h-5" />
+                  <span className="text-xs sm:text-sm">Visual Mode</span>
                 </button>
               </motion.div>
             )}
 
             {isProcessing && (
-              <div className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-semibold flex items-center justify-center gap-3">
-                <Loader2 className="animate-spin" />
-                Processing in {currentMode} mode...
+              <div className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-semibold flex flex-col items-center justify-center gap-2">
+                <div className="flex items-center gap-3">
+                  <Loader2 className="animate-spin" />
+                  <span>{processingStep}</span>
+                </div>
+                <p className="text-[10px] font-mono uppercase tracking-widest opacity-50">Mode: {currentMode}</p>
               </div>
             )}
 
@@ -371,15 +398,15 @@ export default function App() {
           </section>
 
           {/* Right Column: Results */}
-          <section className="space-y-8">
+          <section className="space-y-6 sm:space-y-8">
             <div className="space-y-2">
-              <h2 className="text-3xl font-light tracking-tight">Digitized Output</h2>
-              <p className="text-[#1A1A1A]/60 font-mono text-sm uppercase tracking-widest">
+              <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Digitized Output</h2>
+              <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">
                 {currentMode === 'visual' ? 'Spatial Layout' : 'Structured Content'}
               </p>
             </div>
 
-            <div className="min-h-[600px] rounded-3xl bg-white border border-[#1A1A1A]/10 shadow-sm overflow-hidden flex flex-col">
+            <div className="min-h-[400px] sm:min-h-[600px] rounded-3xl bg-white border border-[#1A1A1A]/10 shadow-sm overflow-hidden flex flex-col">
               <AnimatePresence mode="wait">
                 {isProcessing ? (
                   <motion.div 
@@ -396,7 +423,7 @@ export default function App() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-xl font-medium">AI is reading your notes</p>
+                      <p className="text-xl font-medium">{processingStep || "AI is reading your notes"}</p>
                       <p className="text-sm text-[#1A1A1A]/40 max-w-[280px]">
                         {currentMode === 'visual' 
                           ? "Calculating spatial coordinates and relative sizes..." 
@@ -409,7 +436,7 @@ export default function App() {
                     key="content"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex-1 p-8 overflow-y-auto custom-scrollbar"
+                    className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar"
                   >
                     <OutputSection 
                       content={digitizedContent} 
@@ -421,6 +448,7 @@ export default function App() {
                       onRemoveElement={handleRemoveElement}
                       onAddElement={handleAddElement}
                       onUpdateStructured={handleUpdateStructured}
+                      aspectRatio={aspectRatio}
                     />
                   </motion.div>
                 ) : (
@@ -442,6 +470,34 @@ export default function App() {
       </main>
 
       <style>{`
+        :root {
+          --visual-scale: 0.45;
+          --visual-min-height: 300px;
+        }
+        @media (min-width: 480px) {
+          :root {
+            --visual-scale: 0.6;
+          }
+        }
+        @media (min-width: 640px) {
+          :root {
+            --visual-scale: 0.8;
+            --visual-min-height: 500px;
+          }
+        }
+        @media (min-width: 1024px) {
+          :root {
+            --visual-scale: 1;
+            --visual-min-height: 700px;
+          }
+        }
+
+        .visual-container {
+          background-image: radial-gradient(#1A1A1A/5 1px, transparent 1px);
+          background-size: 20px 20px;
+          min-width: 320px;
+        }
+
         .serif { font-family: 'Georgia', serif; }
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -457,10 +513,17 @@ export default function App() {
           background: rgba(0,0,0,0.2);
         }
 
-        .markdown-content h1 { font-family: 'Georgia', serif; font-style: italic; font-size: 2rem; margin-top: 2rem; margin-bottom: 1rem; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 0.5rem; }
-        .markdown-content h2 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.75rem; font-weight: 600; }
-        .markdown-content h3 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.25rem; margin-top: 1.25rem; margin-bottom: 0.5rem; font-weight: 600; }
-        .markdown-content p { margin-bottom: 1rem; line-height: 1.6; color: #333; white-space: pre-wrap; }
+        .markdown-content h1 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 0.5rem; }
+        .markdown-content h2 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.25rem; margin-top: 1.25rem; margin-bottom: 0.75rem; font-weight: 600; }
+        .markdown-content h3 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; }
+        .markdown-content p { font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.6; color: #333; white-space: pre-wrap; }
+
+        @media (min-width: 640px) {
+          .markdown-content h1 { font-size: 2rem; margin-top: 2rem; }
+          .markdown-content h2 { font-size: 1.5rem; margin-top: 1.5rem; }
+          .markdown-content h3 { font-size: 1.25rem; margin-top: 1.25rem; }
+          .markdown-content p { font-size: 1rem; }
+        }
         .markdown-content ul, .markdown-content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
         .markdown-content li { margin-bottom: 0.5rem; }
         .markdown-content strong { font-weight: 600; color: #000; }
@@ -472,6 +535,11 @@ export default function App() {
         .markdown-content th { background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); padding: 0.75rem; text-align: left; font-weight: 600; }
         .markdown-content td { border: 1px solid rgba(0,0,0,0.1); padding: 0.75rem; }
         .markdown-content tr:nth-child(even) { background: #fdfcfb; }
+
+        .mermaid-diagram svg {
+          max-width: 100% !important;
+          height: auto !important;
+        }
 
         /* PDF Export Styles */
         .pdf-export { padding: 20px !important; }
