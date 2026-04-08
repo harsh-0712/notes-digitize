@@ -277,7 +277,10 @@ export default function App() {
             <div className="w-8 h-8 bg-[#F27D26] rounded-lg flex items-center justify-center text-white shrink-0">
               <FileText size={20} />
             </div>
-            <h1 className="text-lg sm:text-xl font-semibold tracking-tight italic serif truncate">NoteDigitizer</h1>
+            <div className="flex items-baseline gap-1.5">
+              <h1 className="text-lg sm:text-xl font-semibold tracking-tight italic serif truncate">NoteDigitizer</h1>
+              <span className="text-[10px] font-mono text-[#F27D26] font-bold opacity-80">v1.0.0</span>
+            </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             {digitizedContent && (
@@ -471,23 +474,15 @@ export default function App() {
 
       <style>{`
         :root {
-          --visual-scale: 0.45;
           --visual-min-height: 300px;
-        }
-        @media (min-width: 480px) {
-          :root {
-            --visual-scale: 0.6;
-          }
         }
         @media (min-width: 640px) {
           :root {
-            --visual-scale: 0.8;
             --visual-min-height: 500px;
           }
         }
         @media (min-width: 1024px) {
           :root {
-            --visual-scale: 1;
             --visual-min-height: 700px;
           }
         }
@@ -496,6 +491,7 @@ export default function App() {
           background-image: radial-gradient(#1A1A1A/5 1px, transparent 1px);
           background-size: 20px 20px;
           min-width: 320px;
+          container-type: inline-size;
         }
 
         .serif { font-family: 'Georgia', serif; }

@@ -196,8 +196,8 @@ export const OutputSection = ({
                 width: el.width ? `${el.width}%` : 'auto',
                 maxWidth: 'none',
                 fontSize: el.fontSize 
-                  ? `calc(${el.fontSize}px * var(--visual-scale, 1))` 
-                  : 'calc(16px * var(--visual-scale, 1))',
+                  ? `calc(${el.fontSize / 10}cqw)` 
+                  : '1.6cqw',
                 fontWeight: el.fontWeight || 'normal',
                 textAlign: 'left',
                 lineHeight: '1.2',
