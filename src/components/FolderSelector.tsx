@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { storageService, Folder as FolderType } from '../services/storageService';
 import { Folder, Plus, Trash2, FolderOpen, X } from 'lucide-react';
 
