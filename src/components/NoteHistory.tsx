@@ -54,70 +54,84 @@ export function NoteHistory({ onSelectNote }: NoteHistoryProps) {
   const uniqueFolderIds = Array.from(new Set(notes.map(n => n.folderId)));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div className="space-y-10">
+      <div className="flex flex-col sm:flex-row gap-8 pb-8 border-b border-line">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/30" size={18} />
           <input 
             type="text"
-            placeholder="Search notes..."
+            placeholder="Search Archives..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20 focus:border-[#F27D26]"
+            className="w-full pl-12 pr-4 py-4 bg-white border border-line rounded-sm focus:outline-none focus:ring-1 focus:ring-ink font-display font-medium uppercase text-xs tracking-widest placeholder:text-ink/20"
           />
         </div>
-        <select 
-          value={selectedFolderId}
-          onChange={(e) => setSelectedFolderId(e.target.value)}
-          className="px-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20"
-        >
-          <option value="all">All Folders</option>
-          {uniqueFolderIds.map(id => (
-            <option key={id} value={id}>{folders[id] || 'Unknown Folder'}</option>
-          ))}
-        </select>
+        <div className="relative min-w-[200px]">
+          <select 
+            value={selectedFolderId}
+            onChange={(e) => setSelectedFolderId(e.target.value)}
+            className="w-full appearance-none px-6 py-4 bg-white border border-line rounded-sm focus:outline-none focus:ring-1 focus:ring-ink font-display font-bold uppercase text-[10px] tracking-widest cursor-pointer pr-12"
+          >
+            <option value="all">Global Access [All]</option>
+            {uniqueFolderIds.map(id => (
+              <option key={id} value={id}>{folders[id] || 'Unknown'}</option>
+            ))}
+          </select>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-20">
+            <Folder size={16} />
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredNotes.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200 text-gray-400">
-            <FileText size={48} className="mx-auto mb-2 opacity-20" />
-            <p>No notes found</p>
+          <div className="col-span-full text-center py-24 border border-dashed border-line rounded-sm bg-neutral-50 flex flex-col items-center gap-4">
+            <FileText size={48} className="opacity-10" />
+            <p className="font-display font-bold uppercase tracking-widest text-ink/20">Archive record null</p>
           </div>
         ) : (
           filteredNotes.map(note => (
             <div 
               key={note.id}
               onClick={() => onSelectNote(JSON.parse(note.content), note.mode, note.aspectRatio || null)}
-              className="group flex items-center justify-between p-4 bg-white rounded-2xl border border-gray-100 hover:border-[#F27D26] hover:shadow-lg hover:shadow-[#F27D26]/5 cursor-pointer transition-all"
+              className="group relative flex flex-col p-6 bg-white border border-line hover:border-ink hover:shadow-bold cursor-pointer transition-all overflow-hidden"
             >
-              <div className="flex items-center gap-4 min-w-0">
+              {/* Corner accent */}
+              <div className="absolute top-0 right-0 w-8 h-8 border-t border-r border-ink/5 group-hover:border-primary/50 transition-colors" />
+              
+              <div className="flex items-start justify-between mb-8">
                 <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                  note.mode === 'visual' ? "bg-[#F27D26]/10 text-[#F27D26]" : "bg-[#1A1A1A]/5 text-[#1A1A1A]"
+                  "px-3 py-1 rounded-sm text-[8px] font-mono font-bold uppercase tracking-[0.2em]",
+                  note.mode === 'visual' ? "bg-primary text-white" : "bg-ink text-paper"
                 )}>
-                  {note.mode === 'visual' ? <Layout size={20} /> : <Type size={20} />}
+                  {note.mode} mode
                 </div>
-                <div className="truncate">
-                  <h4 className="font-semibold truncate">{note.title}</h4>
-                  <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
-                    <span className="flex items-center gap-1">
-                      <Folder size={12} /> {folders[note.folderId] || 'Unknown'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar size={12} /> {note.createdAt ? format(note.createdAt, 'MMM d, yyyy') : 'Recently'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
                 <button 
                   onClick={(e) => handleDeleteNote(e, note.id)}
-                  className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-2 text-ink/20 hover:text-red-500 transition-colors"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
-                <ChevronRight size={20} className="text-gray-300" />
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-2xl font-display font-bold tracking-tight uppercase group-hover:text-primary transition-colors leading-tight">
+                  {note.title}
+                </h4>
+                
+                <div className="flex flex-wrap items-center gap-6 text-[9px] font-mono font-bold uppercase tracking-widest text-ink/40 border-t border-dashed border-line pt-4">
+                  <span className="flex items-center gap-2">
+                    <Folder size={12} className="text-primary" /> {folders[note.folderId] || 'UNCATEGORIZED'}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <Calendar size={12} className="text-primary" /> {note.createdAt ? format(note.createdAt, 'dd.MM.yyyy') : '??.??.????'}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-display font-bold text-primary tracking-widest">Access Protocol &rarr;</span>
+                <ChevronRight size={16} className="text-primary" />
               </div>
             </div>
           ))

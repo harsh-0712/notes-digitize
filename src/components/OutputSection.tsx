@@ -109,7 +109,7 @@ export const OutputSection = ({
           <textarea
             value={content}
             onChange={(e) => onUpdateStructured?.(e.target.value)}
-            className="w-full min-h-[500px] p-4 font-mono text-sm border border-[#F27D26]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F27D26]/20 bg-[#FDFCFB]"
+            className="w-full min-h-[600px] p-8 font-mono text-sm border-2 border-line rounded-sm focus:outline-none focus:border-ink bg-paper shadow-inner leading-relaxed"
           />
         ) : (
           <Markdown
@@ -125,7 +125,7 @@ export const OutputSection = ({
                 }
                 
                 return (
-                  <code className={className} {...props}>
+                  <code className={cn("bg-ink text-paper px-2 py-0.5 rounded-sm font-mono text-[0.85em]", className)} {...props}>
                     {children}
                   </code>
                 );
@@ -141,22 +141,22 @@ export const OutputSection = ({
 
   if (mode === 'visual' && Array.isArray(content)) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         {isEditing && (
-          <div className="edit-control flex flex-wrap items-center gap-2 p-2 sm:p-3 bg-[#1A1A1A]/5 rounded-2xl border border-[#1A1A1A]/10">
-            <span className="text-[10px] sm:text-xs font-mono uppercase tracking-wider text-[#1A1A1A]/40 mr-1 sm:mr-2 w-full sm:w-auto mb-1 sm:mb-0">Add Element:</span>
+          <div className="edit-control flex flex-wrap items-center gap-3 p-4 bg-ink text-paper rounded-sm shadow-bold border border-ink">
+            <span className="text-[10px] font-mono uppercase tracking-[0.3em] opacity-50 mr-4 w-full md:w-auto">Assembly_Controls:</span>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => onAddElement?.('heading1')} className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-white rounded-lg text-[10px] sm:text-xs font-medium border border-[#1A1A1A]/10 hover:border-[#F27D26]/50 transition-colors">
-                <Type size={10} className="sm:w-3 sm:h-3" /> H1
+              <button onClick={() => onAddElement?.('heading1')} className="flex items-center gap-2 px-4 py-2 border border-paper/20 hover:border-primary hover:text-primary transition-all font-display font-medium text-[10px] uppercase tracking-widest">
+                <Type size={12} /> H1_Node
               </button>
-              <button onClick={() => onAddElement?.('heading2')} className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-white rounded-lg text-[10px] sm:text-xs font-medium border border-[#1A1A1A]/10 hover:border-[#F27D26]/50 transition-colors">
-                <Type size={10} className="sm:w-3 sm:h-3" /> H2
+              <button onClick={() => onAddElement?.('heading2')} className="flex items-center gap-2 px-4 py-2 border border-paper/20 hover:border-primary hover:text-primary transition-all font-display font-medium text-[10px] uppercase tracking-widest">
+                <Type size={12} /> H2_Node
               </button>
-              <button onClick={() => onAddElement?.('paragraph')} className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-white rounded-lg text-[10px] sm:text-xs font-medium border border-[#1A1A1A]/10 hover:border-[#F27D26]/50 transition-colors">
-                <Layout size={10} className="sm:w-3 sm:h-3" /> Para
+              <button onClick={() => onAddElement?.('paragraph')} className="flex items-center gap-2 px-4 py-2 border border-paper/20 hover:border-primary hover:text-primary transition-all font-display font-medium text-[10px] uppercase tracking-widest">
+                <Layout size={12} /> P_Block
               </button>
-              <button onClick={() => onAddElement?.('diagram')} className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-white rounded-lg text-[10px] sm:text-xs font-medium border border-[#1A1A1A]/10 hover:border-[#F27D26]/50 transition-colors">
-                <Square size={10} className="sm:w-3 sm:h-3" /> Diagram
+              <button onClick={() => onAddElement?.('diagram')} className="flex items-center gap-2 px-4 py-2 border border-paper/20 hover:border-primary hover:text-primary transition-all font-display font-medium text-[10px] uppercase tracking-widest">
+                <Square size={12} /> Diagram_X
               </button>
             </div>
           </div>
@@ -165,10 +165,10 @@ export const OutputSection = ({
         <div className="overflow-x-auto pb-4 custom-scrollbar">
           <div 
             ref={contentRef} 
-            className="relative w-full bg-white rounded-xl overflow-hidden shadow-inner border border-gray-100 select-none visual-container"
+            className="relative w-full bg-white rounded-sm overflow-hidden border border-line select-none visual-container shadow-inner"
             style={{ 
               aspectRatio: aspectRatio ? `${aspectRatio}` : 'auto',
-              minHeight: aspectRatio ? 'auto' : 'var(--visual-min-height, 500px)'
+              minHeight: aspectRatio ? 'auto' : '600px'
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -177,7 +177,7 @@ export const OutputSection = ({
           >
             {selectionRect && (
               <div 
-                className="absolute border-2 border-[#F27D26] bg-[#F27D26]/10 pointer-events-none z-[100] rounded-sm"
+                className="absolute border-2 border-primary bg-primary/5 pointer-events-none z-[100] rounded-sm"
                 style={{
                   left: Math.min(selectionRect.x1, selectionRect.x2),
                   top: Math.min(selectionRect.y1, selectionRect.y2),
@@ -196,8 +196,8 @@ export const OutputSection = ({
                 width: el.width ? `${el.width}%` : 'auto',
                 maxWidth: 'none',
                 fontSize: el.fontSize 
-                  ? `calc(${el.fontSize / 10}cqw)` 
-                  : '1.6cqw',
+                  ? `${el.fontSize}px` 
+                  : '16px',
                 fontWeight: el.fontWeight || 'normal',
                 textAlign: 'left',
                 lineHeight: '1.4',
@@ -205,7 +205,7 @@ export const OutputSection = ({
                 wordBreak: 'break-word',
                 padding: '0',
                 margin: '0',
-                color: el.type.startsWith('heading') ? '#111827' : '#1f2937',
+                color: el.type.startsWith('heading') ? '#141414' : '#333',
                 cursor: isEditing ? 'move' : 'default',
               };
 
@@ -213,7 +213,7 @@ export const OutputSection = ({
 
             return (
               <motion.div
-                key={`${i}-${el.x}-${el.y}`} // Use key to force reset on position update
+                key={`${i}-${el.x}-${el.y}`} 
                 drag={isEditing}
                 dragMomentum={false}
                 dragElastic={0}
@@ -252,7 +252,6 @@ export const OutputSection = ({
                   setTempOffsets({});
                   if (!contentRef.current || !Array.isArray(content)) return;
                   
-                  // Find the closest parent that is our visual element block
                   const draggedElement = (event.target as HTMLElement).closest('.visual-element-block') as HTMLElement;
                   if (!draggedElement) return;
 
@@ -260,7 +259,6 @@ export const OutputSection = ({
                   const containerRect = containerElement.getBoundingClientRect();
                   const elementRect = draggedElement.getBoundingClientRect();
                   
-                  // Calculate position relative to container in percentages
                   const newX = ((elementRect.left - containerRect.left) / containerRect.width) * 100;
                   const newY = ((elementRect.top - containerRect.top) / containerRect.height) * 100;
                   
@@ -286,88 +284,88 @@ export const OutputSection = ({
                 style={style}
                 className={cn(
                   "visual-element-block group transition-shadow",
-                  isEditing && "hover:ring-1 hover:ring-[#F27D26]/30 rounded p-1",
-                  isSelected && "ring-2 ring-[#F27D26]/50 bg-[#F27D26]/5 shadow-md",
-                  isCurrentlyEditing && "ring-2 ring-[#F27D26] z-50 bg-white shadow-xl"
+                  isEditing && "hover:ring-1 hover:ring-primary/40 rounded p-1",
+                  isSelected && "ring-2 ring-primary bg-primary/5 shadow-bold",
+                  isCurrentlyEditing && "ring-2 ring-ink z-50 bg-paper shadow-bold"
                 )}
               >
                 {isEditing && (
-                  <div className="edit-control absolute -top-8 left-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                    <div className="p-1 sm:p-1.5 bg-[#1A1A1A] text-white rounded-md cursor-move">
-                      <GripVertical size={10} className="sm:w-3 sm:h-3" />
+                  <div className="edit-control absolute -top-10 left-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    <div className="p-2 bg-ink text-paper rounded-sm cursor-move shadow-bold">
+                      <GripVertical size={12} />
                     </div>
                     <button 
                       onClick={() => setEditingIndex(isCurrentlyEditing ? null : i)}
-                      className="p-1 sm:p-1.5 bg-[#1A1A1A] text-white rounded-md hover:bg-[#F27D26] transition-colors"
+                      className="p-2 bg-ink text-paper rounded-sm hover:text-primary transition-colors shadow-bold"
                     >
-                      <Edit3 size={10} className="sm:w-3 sm:h-3" />
+                      <Edit3 size={12} />
                     </button>
                     <button 
                       onClick={() => onRemoveElement?.(i)}
-                      className="p-1 sm:p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                      className="p-2 bg-red-600 text-white rounded-sm hover:brightness-125 transition-colors shadow-bold"
                     >
-                      <Trash2 size={10} className="sm:w-3 sm:h-3" />
+                      <Trash2 size={12} />
                     </button>
-                    <div className="hidden sm:flex px-2 py-1 bg-white border border-[#1A1A1A]/10 rounded-md text-[10px] font-mono text-[#1A1A1A]/40 items-center gap-1">
+                    <div className="hidden sm:flex px-3 py-2 bg-paper border border-ink rounded-sm text-[8px] font-mono text-ink/40 items-center gap-2 shadow-bold">
                       <Move size={10} /> {Math.round(el.x)}%, {Math.round(el.y)}%
                     </div>
                   </div>
                 )}
 
                 {isCurrentlyEditing ? (
-                  <div className="p-2 space-y-3 bg-white w-[200px] sm:w-auto">
+                  <div className="p-4 space-y-4 bg-paper w-[240px] sm:w-[300px] border border-ink shadow-bold">
                     {el.type === 'diagram' ? (
                       <textarea
                         value={el.mermaidCode || ''}
                         onChange={(e) => onUpdateElement?.(i, { mermaidCode: e.target.value })}
-                        className="w-full min-h-[80px] sm:min-h-[100px] p-2 text-[10px] sm:text-xs font-mono border rounded focus:outline-none focus:ring-1 focus:ring-[#F27D26]"
-                        placeholder="Mermaid code..."
+                        className="w-full min-h-[120px] p-3 text-[10px] font-mono border border-line focus:border-ink bg-white rounded-sm"
+                        placeholder="Mermaid structure..."
                       />
                     ) : (
                       <textarea
                         value={el.text || ''}
                         onChange={(e) => onUpdateElement?.(i, { text: e.target.value })}
-                        className="w-full p-2 text-xs sm:text-sm border rounded focus:outline-none focus:ring-1 focus:ring-[#F27D26]"
-                        placeholder="Text content..."
+                        className="w-full p-3 text-sm font-sans border border-line focus:border-ink bg-white rounded-sm"
+                        placeholder="Manuscript text..."
                       />
                     )}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                      <div className="w-full sm:flex-1">
-                        <label className="text-[9px] sm:text-[10px] uppercase text-gray-400 block mb-1">Width (%)</label>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[8px] font-mono font-bold uppercase tracking-widest text-ink/40 block mb-1">Global Scale (X-Axis)</label>
                         <input 
                           type="range" min="5" max="100" 
                           value={el.width || 30} 
                           onChange={(e) => onUpdateElement?.(i, { width: parseInt(e.target.value) })}
-                          className="w-full accent-[#F27D26]"
+                          className="w-full accent-primary"
                         />
                       </div>
-                      <div className="w-full sm:flex-1">
-                        <label className="text-[9px] sm:text-[10px] uppercase text-gray-400 block mb-1">Font Size</label>
+                      <div>
+                        <label className="text-[8px] font-mono font-bold uppercase tracking-widest text-ink/40 block mb-1">Typography Step</label>
                         <input 
                           type="number" 
                           value={el.fontSize || 14} 
                           onChange={(e) => onUpdateElement?.(i, { fontSize: parseInt(e.target.value) })}
-                          className="w-full p-1 text-[10px] sm:text-xs border rounded"
+                          className="w-full p-2 text-xs font-mono border border-line rounded-sm"
                         />
                       </div>
                     </div>
                     <button 
                       onClick={() => setEditingIndex(null)}
-                      className="w-full py-1.5 bg-[#F27D26] text-white text-[10px] sm:text-xs font-medium rounded-lg hover:bg-[#F27D26]/90"
+                      className="w-full py-3 bg-ink text-paper text-[10px] font-display font-bold uppercase tracking-widest rounded-sm hover:brightness-125 transition-all"
                     >
-                      Done
+                      COMMIT_CHANGES
                     </button>
                   </div>
                 ) : (
                   <>
                     {el.type === 'diagram' && el.mermaidCode ? (
-                      <div className="z-10">
+                      <div className="z-10 bg-white/50 p-4 border border-dashed border-line">
                         <MermaidDiagram code={el.mermaidCode} noMargin />
                       </div>
                     ) : (
                       <div 
                         className={cn(
-                          el.type.startsWith('heading') && "font-serif italic font-semibold"
+                          el.type.startsWith('heading') && "font-serif italic font-semibold tracking-tight"
                         )}
                       >
                         {el.text}

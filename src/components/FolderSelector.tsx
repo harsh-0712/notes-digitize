@@ -46,20 +46,27 @@ export function FolderSelector({ onSelect, onClose }: FolderSelectorProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
-        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Select Folder</h3>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+    <div className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-paper rounded-sm w-full max-w-md overflow-hidden shadow-bold border border-ink"
+      >
+        <div className="p-8 border-b border-line flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="text-xl font-display font-bold uppercase tracking-tight">Access Points</h3>
+            <p className="text-[10px] font-mono uppercase tracking-widest opacity-40">System Directories</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-ink hover:text-paper rounded-full transition-all">
             <X size={20} />
           </button>
         </div>
         
-        <div className="p-6 max-h-[400px] overflow-y-auto space-y-2 custom-scrollbar">
+        <div className="p-8 max-h-[400px] overflow-y-auto space-y-3 custom-scrollbar">
           {folders.length === 0 && !isCreating && (
-            <div className="text-center py-8 text-gray-400">
-              <FolderOpen size={48} className="mx-auto mb-2 opacity-20" />
-              <p>No folders yet</p>
+            <div className="text-center py-12 border border-dashed border-line">
+              <FolderOpen size={48} className="mx-auto mb-4 opacity-10" />
+              <p className="font-display font-bold text-xs uppercase tracking-widest opacity-20">No directories found</p>
             </div>
           )}
           
@@ -67,15 +74,15 @@ export function FolderSelector({ onSelect, onClose }: FolderSelectorProps) {
             <div 
               key={folder.id}
               onClick={() => onSelect(folder.id)}
-              className="group flex items-center justify-between p-4 rounded-2xl border border-gray-100 hover:border-[#F27D26] hover:bg-[#F27D26]/5 cursor-pointer transition-all"
+              className="group flex items-center justify-between p-5 border border-line hover:border-ink hover:bg-white cursor-pointer transition-all"
             >
-              <div className="flex items-center gap-3">
-                <Folder size={20} className="text-[#F27D26]" />
-                <span className="font-medium">{folder.name}</span>
+              <div className="flex items-center gap-4">
+                <Folder size={18} className="text-primary group-hover:scale-110 transition-transform" />
+                <span className="font-display font-bold uppercase text-xs tracking-widest">{folder.name}</span>
               </div>
               <button 
                 onClick={(e) => handleDeleteFolder(e, folder.id)}
-                className="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                className="p-2 text-ink/10 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
               >
                 <Trash2 size={16} />
               </button>
@@ -83,31 +90,34 @@ export function FolderSelector({ onSelect, onClose }: FolderSelectorProps) {
           ))}
           
           {isCreating ? (
-            <form onSubmit={handleCreateFolder} className="p-4 rounded-2xl border-2 border-dashed border-[#F27D26]/30 bg-[#F27D26]/5 space-y-3">
-              <input 
-                autoFocus
-                type="text"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Folder name..."
-                className="w-full p-2 bg-transparent border-b border-[#F27D26]/30 focus:outline-none focus:border-[#F27D26] font-medium"
-              />
+            <form onSubmit={handleCreateFolder} className="p-6 border border-ink bg-white space-y-4">
+              <div className="space-y-2">
+                <label className="text-[8px] font-mono font-bold uppercase tracking-[0.3em] text-primary">New Directory ID</label>
+                <input 
+                  autoFocus
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="EX: FIELD_NOTES_2024"
+                  className="w-full p-3 bg-paper border border-line focus:outline-none focus:border-ink font-display font-medium uppercase text-xs tracking-widest"
+                />
+              </div>
               <div className="flex gap-2">
-                <button type="submit" className="flex-1 py-2 bg-[#F27D26] text-white rounded-xl text-sm font-bold">Create</button>
-                <button type="button" onClick={() => setIsCreating(false)} className="px-4 py-2 bg-gray-200 rounded-xl text-sm font-bold">Cancel</button>
+                <button type="submit" className="flex-1 py-3 bg-ink text-paper rounded-sm font-display font-bold uppercase text-[10px] tracking-widest hover:brightness-125 transition-all">Register</button>
+                <button type="button" onClick={() => setIsCreating(false)} className="px-5 py-3 border border-line rounded-sm font-display font-bold uppercase text-[10px] tracking-widest hover:bg-neutral-50">Abort</button>
               </div>
             </form>
           ) : (
             <button 
               onClick={() => setIsCreating(true)}
-              className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-[#F27D26] hover:text-[#F27D26] transition-all font-medium"
+              className="w-full flex items-center justify-center gap-3 p-5 border border-dashed border-line text-ink/40 hover:border-ink hover:text-ink transition-all font-display font-bold uppercase text-[10px] tracking-widest"
             >
-              <Plus size={20} />
-              New Folder
+              <Plus size={18} />
+              Construct New Directory
             </button>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
