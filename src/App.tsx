@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   FileText, 
   Download, 
@@ -19,7 +19,14 @@ import {
   AlertCircle,
   Layout,
   Type,
-  Upload
+  Upload,
+  History,
+  Moon,
+  Sun,
+  LogOut,
+  FolderPlus,
+  Save,
+  Plus
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -29,6 +36,9 @@ import { digitizeNotes } from './services/geminiService';
 import { DigitizationMode, VisualElement } from './types';
 import { OutputSection } from './components/OutputSection';
 import { compressImage } from './lib/imageUtils';
+import { NoteHistory } from './components/NoteHistory';
+import { FolderSelector } from './components/FolderSelector';
+import { storageService } from './services/storageService';
 
 export default function App() {
   const [image, setImage] = useState<string | null>(null);
@@ -39,8 +49,47 @@ export default function App() {
   const [digitizedContent, setDigitizedContent] = useState<string | VisualElement[] | null>(null);
   const [currentMode, setCurrentMode] = useState<DigitizationMode | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showFolderSelector, setShowFolderSelector] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const handleSaveToFolder = async (folderId: string) => {
+    if (!digitizedContent || !currentMode) return;
+    
+    setIsSaving(true);
+    setShowFolderSelector(false);
+    
+    try {
+      const title = prompt('Enter a title for this note:', 'New Note') || 'Untitled Note';
+      await storageService.saveNote({
+        title,
+        folderId,
+        mode: currentMode,
+        content: JSON.stringify(digitizedContent),
+        aspectRatio,
+        userId: 'local-user' // Placeholder for future DB integration
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error saving note:', err);
+      setError('Failed to save note to folder.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSelectHistoryNote = (content: string | VisualElement[], mode: DigitizationMode, ratio: number | null) => {
+    setDigitizedContent(content);
+    setCurrentMode(mode);
+    setAspectRatio(ratio);
+    setShowHistory(false);
+    setImage(null); // Clear current image when viewing history
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -269,7 +318,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] font-sans selection:bg-[#F27D26]/20">
+    <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] font-sans selection:bg-[#F27D26]/20 transition-colors">
       {/* Header */}
       <header className="border-b border-[#1A1A1A]/10 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -283,6 +332,15 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                showHistory ? "bg-[#F27D26] text-white" : "hover:bg-gray-100"
+              )}
+            >
+              <History size={20} />
+            </button>
             {digitizedContent && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
@@ -290,22 +348,11 @@ export default function App() {
                   "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all active:scale-95",
                   isEditing 
                     ? "bg-[#F27D26] text-white shadow-lg shadow-[#F27D26]/20" 
-                    : "bg-[#1A1A1A]/5 text-[#1A1A1A] hover:bg-[#1A1A1A]/10"
+                    : "bg-[#1A1A1A]/5 dark:bg-white/5 text-[#1A1A1A] dark:text-white hover:bg-[#1A1A1A]/10 dark:hover:bg-white/10"
                 )}
               >
                 <Layout size={14} className="sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">{isEditing ? 'Finish' : 'Edit'}</span>
-                <span className="xs:hidden">{isEditing ? 'Done' : 'Edit'}</span>
-              </button>
-            )}
-            {digitizedContent && (
-              <button
-                onClick={downloadPDF}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#1A1A1A] text-white rounded-full text-xs sm:text-sm font-medium hover:bg-[#1A1A1A]/90 transition-all active:scale-95"
-              >
-                <Download size={14} className="sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">Export PDF</span>
-                <span className="xs:hidden">PDF</span>
               </button>
             )}
           </div>
@@ -313,164 +360,230 @@ export default function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          
-          {/* Left Column: Upload & Preview */}
-          <section className="space-y-6 sm:space-y-8">
-            <div className="space-y-2">
-              <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Upload your notes</h2>
-              <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">Handwritten to Digital</p>
-            </div>
-
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                "relative aspect-[4/5] sm:aspect-[3/4] rounded-3xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group",
-                image ? "border-transparent" : "border-[#1A1A1A]/20 hover:border-[#F27D26]/50 bg-white"
-              )}
+        <AnimatePresence mode="wait">
+          {showHistory ? (
+            <motion.div
+              key="history"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-8"
             >
-              {image ? (
-                <>
-                  <img src={image} alt="Preview" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <p className="text-white font-medium flex items-center gap-2">
-                      <RefreshCw size={20} />
-                      Change Image
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-[#F27D26]/10 flex items-center justify-center text-[#F27D26]">
-                    <Upload size={32} />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="font-medium">Click to upload or drag and drop</p>
-                    <p className="text-sm text-[#1A1A1A]/40">PNG, JPG or JPEG (max. 10MB)</p>
-                  </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Your History</h2>
+                  <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">Saved Digitizations</p>
                 </div>
-              )}
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImageUpload} 
-                accept="image/*" 
-                className="hidden" 
-              />
-            </div>
-
-            {image && !isProcessing && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
-              >
-                <button
-                  onClick={() => handleDigitize('structured')}
-                  className="py-3 sm:py-4 bg-[#1A1A1A] text-white rounded-2xl font-semibold shadow-xl hover:bg-[#1A1A1A]/90 transition-all active:scale-95 flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2"
+                <button 
+                  onClick={() => setShowHistory(false)}
+                  className="px-4 py-2 bg-[#1A1A1A] text-white rounded-xl text-sm font-bold"
                 >
-                  <Type size={18} className="sm:w-5 sm:h-5" />
-                  <span className="text-xs sm:text-sm">Structured Mode</span>
+                  Back to Scanner
                 </button>
-                <button
-                  onClick={() => handleDigitize('visual')}
-                  className="py-3 sm:py-4 bg-[#F27D26] text-white rounded-2xl font-semibold shadow-xl shadow-[#F27D26]/20 hover:bg-[#F27D26]/90 transition-all active:scale-95 flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2"
-                >
-                  <Layout size={18} className="sm:w-5 sm:h-5" />
-                  <span className="text-xs sm:text-sm">Visual Mode</span>
-                </button>
-              </motion.div>
-            )}
-
-            {isProcessing && (
-              <div className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-semibold flex flex-col items-center justify-center gap-2">
-                <div className="flex items-center gap-3">
-                  <Loader2 className="animate-spin" />
-                  <span>{processingStep}</span>
+              </div>
+              <NoteHistory onSelectNote={handleSelectHistoryNote} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="scanner"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12"
+            >
+              {/* Left Column: Upload & Preview */}
+              <section className="space-y-6 sm:space-y-8">
+                <div className="space-y-2">
+                  <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Upload your notes</h2>
+                  <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">Handwritten to Digital</p>
                 </div>
-                <p className="text-[10px] font-mono uppercase tracking-widest opacity-50">Mode: {currentMode}</p>
-              </div>
-            )}
 
-            {error && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600">
-                <AlertCircle className="shrink-0 mt-0.5" size={18} />
-                <p className="text-sm font-medium">{error}</p>
-              </div>
-            )}
-          </section>
-
-          {/* Right Column: Results */}
-          <section className="space-y-6 sm:space-y-8">
-            <div className="space-y-2">
-              <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Digitized Output</h2>
-              <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">
-                {currentMode === 'visual' ? 'Spatial Layout' : 'Structured Content'}
-              </p>
-            </div>
-
-            <div className="min-h-[400px] sm:min-h-[600px] rounded-3xl bg-white border border-[#1A1A1A]/10 shadow-sm overflow-hidden flex flex-col">
-              <AnimatePresence mode="wait">
-                {isProcessing ? (
-                  <motion.div 
-                    key="loading"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-6"
-                  >
-                    <div className="relative">
-                      <div className="w-20 h-20 border-4 border-[#F27D26]/20 border-t-[#F27D26] rounded-full animate-spin" />
-                      <div className="absolute inset-0 flex items-center justify-center text-[#F27D26]">
-                        <ImageIcon size={24} />
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    "relative aspect-[4/5] sm:aspect-[3/4] rounded-3xl border-2 border-dashed transition-all cursor-pointer overflow-hidden group",
+                    image ? "border-transparent" : "border-[#1A1A1A]/20 hover:border-[#F27D26]/50 bg-white"
+                  )}
+                >
+                  {image ? (
+                    <>
+                      <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <p className="text-white font-medium flex items-center gap-2">
+                          <RefreshCw size={20} />
+                          Change Image
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
+                      <div className="w-16 h-16 rounded-full bg-[#F27D26]/10 flex items-center justify-center text-[#F27D26]">
+                        <Upload size={32} />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium">Click to upload or drag and drop</p>
+                        <p className="text-sm text-[#1A1A1A]/40">PNG, JPG or JPEG (max. 10MB)</p>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <p className="text-xl font-medium">{processingStep || "AI is reading your notes"}</p>
-                      <p className="text-sm text-[#1A1A1A]/40 max-w-[280px]">
-                        {currentMode === 'visual' 
-                          ? "Calculating spatial coordinates and relative sizes..." 
-                          : "Recognizing handwriting and identifying diagrams..."}
-                      </p>
-                    </div>
-                  </motion.div>
-                ) : digitizedContent ? (
+                  )}
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    onChange={handleImageUpload} 
+                    accept="image/*" 
+                    className="hidden" 
+                  />
+                </div>
+
+                {image && !isProcessing && (
                   <motion.div 
-                    key="content"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"
                   >
-                    <OutputSection 
-                      content={digitizedContent} 
-                      mode={currentMode} 
-                      contentRef={contentRef}
-                      isEditing={isEditing}
-                      onUpdateElement={handleUpdateElement}
-                      onUpdateElements={handleUpdateElements}
-                      onRemoveElement={handleRemoveElement}
-                      onAddElement={handleAddElement}
-                      onUpdateStructured={handleUpdateStructured}
-                      aspectRatio={aspectRatio}
-                    />
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    key="empty"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex-1 flex flex-col items-center justify-center p-12 text-center text-[#1A1A1A]/30"
-                  >
-                    <FileText size={48} strokeWidth={1} />
-                    <p className="mt-4 font-medium">No content to display yet</p>
-                    <p className="text-sm">Upload and choose a mode to see results</p>
+                    <button
+                      onClick={() => handleDigitize('structured')}
+                      className="py-3 sm:py-4 bg-[#1A1A1A] text-white rounded-2xl font-semibold shadow-xl hover:bg-[#1A1A1A]/90 transition-all active:scale-95 flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2"
+                    >
+                      <Type size={18} className="sm:w-5 sm:h-5" />
+                      <span className="text-xs sm:text-sm">Structured Mode</span>
+                    </button>
+                    <button
+                      onClick={() => handleDigitize('visual')}
+                      className="py-3 sm:py-4 bg-[#F27D26] text-white rounded-2xl font-semibold shadow-xl shadow-[#F27D26]/20 hover:bg-[#F27D26]/90 transition-all active:scale-95 flex flex-row sm:flex-col items-center justify-center gap-3 sm:gap-2"
+                    >
+                      <Layout size={18} className="sm:w-5 sm:h-5" />
+                      <span className="text-xs sm:text-sm">Visual Mode</span>
+                    </button>
                   </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
-          </section>
-        </div>
+
+                {isProcessing && (
+                  <div className="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-semibold flex flex-col items-center justify-center gap-2">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="animate-spin" />
+                      <span>{processingStep}</span>
+                    </div>
+                    <p className="text-[10px] font-mono uppercase tracking-widest opacity-50">Mode: {currentMode}</p>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3 text-red-600">
+                    <AlertCircle className="shrink-0 mt-0.5" size={18} />
+                    <p className="text-sm font-medium">{error}</p>
+                  </div>
+                )}
+              </section>
+
+              {/* Right Column: Results */}
+              <section className="space-y-6 sm:space-y-8">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <h2 className="text-2xl sm:text-3xl font-light tracking-tight">Digitized Output</h2>
+                    <p className="text-[#1A1A1A]/60 font-mono text-xs sm:text-sm uppercase tracking-widest">
+                      {currentMode === 'visual' ? 'Spatial Layout' : 'Structured Content'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    {digitizedContent && (
+                      <button
+                        onClick={() => setShowFolderSelector(true)}
+                        disabled={isSaving}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                          saveSuccess 
+                            ? "bg-green-500 text-white" 
+                            : "bg-[#F27D26] text-white hover:bg-[#F27D26]/90"
+                        )}
+                      >
+                        {isSaving ? <Loader2 className="animate-spin" size={16} /> : saveSuccess ? <CheckCircle2 size={16} /> : <Save size={16} />}
+                        {saveSuccess ? 'Saved!' : 'Save to Folder'}
+                      </button>
+                    )}
+                    {digitizedContent && (
+                      <button
+                        onClick={downloadPDF}
+                        className="p-2 bg-[#1A1A1A] text-white rounded-xl hover:bg-[#1A1A1A]/90 transition-all"
+                        title="Export PDF"
+                      >
+                        <Download size={20} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="min-h-[400px] sm:min-h-[600px] rounded-3xl bg-white border border-[#1A1A1A]/10 shadow-sm overflow-hidden flex flex-col">
+                  <AnimatePresence mode="wait">
+                    {isProcessing ? (
+                      <motion.div 
+                        key="loading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-6"
+                      >
+                        <div className="relative">
+                          <div className="w-20 h-20 border-4 border-[#F27D26]/20 border-t-[#F27D26] rounded-full animate-spin" />
+                          <div className="absolute inset-0 flex items-center justify-center text-[#F27D26]">
+                            <ImageIcon size={24} />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xl font-medium">{processingStep || "AI is reading your notes"}</p>
+                          <p className="text-sm text-[#1A1A1A]/40 max-w-[280px]">
+                            {currentMode === 'visual' 
+                              ? "Calculating spatial coordinates and relative sizes..." 
+                              : "Recognizing handwriting and identifying diagrams..."}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ) : digitizedContent ? (
+                      <motion.div 
+                        key="content"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex-1 p-4 sm:p-8 overflow-y-auto custom-scrollbar"
+                      >
+                        <OutputSection 
+                          content={digitizedContent} 
+                          mode={currentMode} 
+                          contentRef={contentRef}
+                          isEditing={isEditing}
+                          onUpdateElement={handleUpdateElement}
+                          onUpdateElements={handleUpdateElements}
+                          onRemoveElement={handleRemoveElement}
+                          onAddElement={handleAddElement}
+                          onUpdateStructured={handleUpdateStructured}
+                          aspectRatio={aspectRatio}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div 
+                        key="empty"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex-1 flex flex-col items-center justify-center p-12 text-center text-[#1A1A1A]/30"
+                      >
+                        <FileText size={48} strokeWidth={1} />
+                        <p className="mt-4 font-medium">No content to display yet</p>
+                        <p className="text-sm">Upload and choose a mode to see results</p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </section>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
+
+      {showFolderSelector && (
+        <FolderSelector 
+          onSelect={handleSaveToFolder} 
+          onClose={() => setShowFolderSelector(false)} 
+        />
+      )}
 
       <style>{`
         :root {
@@ -510,8 +623,8 @@ export default function App() {
         }
 
         .markdown-content h1 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 0.5rem; }
-        .markdown-content h2 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.25rem; margin-top: 1.25rem; margin-bottom: 0.75rem; font-weight: 600; }
-        .markdown-content h3 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; }
+        .markdown-content h2 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.25rem; margin-top: 1.25rem; margin-bottom: 0.75rem; font-weight: 600; color: inherit; }
+        .markdown-content h3 { font-family: 'Georgia', serif; font-style: italic; font-size: 1.1rem; margin-top: 1rem; margin-bottom: 0.5rem; font-weight: 600; color: inherit; }
         .markdown-content p { font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.6; color: #333; white-space: pre-wrap; }
 
         @media (min-width: 640px) {
@@ -520,16 +633,16 @@ export default function App() {
           .markdown-content h3 { font-size: 1.25rem; margin-top: 1.25rem; }
           .markdown-content p { font-size: 1rem; }
         }
-        .markdown-content ul, .markdown-content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
-        .markdown-content li { margin-bottom: 0.5rem; }
+        .markdown-content ul, .markdown-content ol { margin-bottom: 1rem; padding-left: 1.5rem; color: inherit; }
+        .markdown-content li { margin-bottom: 0.5rem; color: inherit; }
         .markdown-content strong { font-weight: 600; color: #000; }
         .markdown-content blockquote { border-left: 4px solid #F27D26; padding-left: 1rem; font-style: italic; color: #666; margin: 1.5rem 0; }
-        .markdown-content code { background: #f0f0f0; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .markdown-content code { background: #f0f0f0; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: monospace; font-size: 0.9em; color: #1A1A1A; }
         .markdown-content pre { background: #1a1a1a; color: #fff; padding: 1rem; border-radius: 12px; overflow-x: auto; margin-bottom: 1.5rem; }
         .markdown-content pre code { background: transparent; color: inherit; padding: 0; }
-        .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid rgba(0,0,0,0.1); }
-        .markdown-content th { background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); padding: 0.75rem; text-align: left; font-weight: 600; }
-        .markdown-content td { border: 1px solid rgba(0,0,0,0.1); padding: 0.75rem; }
+        .markdown-content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; border: 1px solid rgba(0,0,0,0.1); color: inherit; }
+        .markdown-content th { background: #f9fafb; border: 1px solid rgba(0,0,0,0.1); padding: 0.75rem; text-align: left; font-weight: 600; color: #1A1A1A; }
+        .markdown-content td { border: 1px solid rgba(0,0,0,0.1); padding: 0.75rem; color: inherit; }
         .markdown-content tr:nth-child(even) { background: #fdfcfb; }
 
         .mermaid-diagram svg {

@@ -19,9 +19,10 @@ export async function digitizeNotes(image: string, mode: DigitizationMode): Prom
        1. COORDINATES: Provide 'x' and 'y' as percentages (0-100) of image width/height.
        2. GROUPING: Align related elements (e.g., list items) to the EXACT SAME 'x' coordinate.
        3. SPACING: Maintain relative vertical distance.
-       4. BREAKDOWN: Every line/bullet/heading must be a separate element.
-       5. ALIGNMENT: Use 'textAlign: left' for all text.
-       6. FONT: Use 'fontSize' for relative scale (32=title, 24=heading, 16=text).
+       4. BREAKDOWN: Every single line of handwriting must be its own separate element. NEVER combine multiple lines into one paragraph.
+       5. WIDTH: Estimate the 'width' (0-100) based on how much horizontal space the handwriting actually occupies.
+       6. ALIGNMENT: Use 'textAlign: left' for all text.
+       7. FONT: Use 'fontSize' for relative scale (32=title, 24=heading, 16=text).
        
        Return JSON array:
        - type: 'heading1'|'heading2'|'heading3'|'paragraph'|'list-item'|'diagram'
